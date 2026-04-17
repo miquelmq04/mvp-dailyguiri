@@ -1,0 +1,1 @@
+ALTER TABLE "conversation_sessions" ADD COLUMN "is_ai_responding" boolean DEFAULT false NOT NULL;

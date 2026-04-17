@@ -1,0 +1,1 @@
+ALTER TABLE "conversation_sessions" ADD COLUMN "session_status" varchar(20) DEFAULT 'in_course' NOT NULL;

@@ -1,0 +1,1 @@
+ALTER TABLE "messages" ADD COLUMN "message_type" varchar(20) DEFAULT 'conversation' NOT NULL;

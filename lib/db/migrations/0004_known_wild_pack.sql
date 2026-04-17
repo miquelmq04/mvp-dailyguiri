@@ -1,0 +1,2 @@
+ALTER TABLE "scheduled_messages" ADD COLUMN "created_session_id" integer;--> statement-breakpoint
+ALTER TABLE "scheduled_messages" ADD CONSTRAINT "scheduled_messages_created_session_id_conversation_sessions_id_fk" FOREIGN KEY ("created_session_id") REFERENCES "public"."conversation_sessions"("id") ON DELETE no action ON UPDATE no action;

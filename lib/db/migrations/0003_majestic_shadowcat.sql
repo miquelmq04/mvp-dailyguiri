@@ -1,0 +1,1 @@
+ALTER TABLE "conversation_sessions" ADD COLUMN "max_user_messages" integer DEFAULT 5 NOT NULL;
