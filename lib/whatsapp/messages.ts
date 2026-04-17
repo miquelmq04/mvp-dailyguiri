@@ -78,17 +78,17 @@ export function calculateTomorrowMessageDate(user: User): Date {
 
 export async function sendMessageToUser(lid: string, message: string) {
   try {
-    const responseBaileys = await fetch(
-      "http://localhost:3001/api/send-message",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          whatsappLid: lid,
-          message: message,
-        }),
-      }
-    );
+    const whatsappServiceUrl =
+      process.env.WHATSAPP_SERVICE_URL ||
+      "http://localhost:3001/api/send-message";
+    const responseBaileys = await fetch(whatsappServiceUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        whatsappLid: lid,
+        message: message,
+      }),
+    });
 
     const result = await responseBaileys.json();
 
