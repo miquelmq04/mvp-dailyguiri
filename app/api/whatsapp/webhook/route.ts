@@ -60,18 +60,24 @@ export async function POST(request: Request) {
     await sendMessageToUser(data.whatsappLid, message);
     await scheduleMessage(new Date(2004), user, null);
 
-    // Trigger cron to send the scheduled message after 7 seconds
-    await setTimeout(async () => {
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    // 1. Creamos una pausa real de 3 segundos
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    // 2. Ejecutamos el fetch (ahora sí se ejecutará)
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    try {
       await fetch(`${baseUrl}/api/cron/send-users-open-notification`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${process.env.CRON_SECRET}`,
         },
       });
-    }, 3000);
+      console.log("✅ Fetch al cron ejecutado con éxito");
+    } catch (error) {
+      console.error("❌ Error disparando el cron:", error);
+    }
 
+    // 3. Devolvemos la respuesta al final del todo
     return Response.json({
       whatsappLid: data.whatsappLid,
       message: message,
