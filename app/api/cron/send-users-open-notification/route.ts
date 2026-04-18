@@ -16,6 +16,11 @@ export async function POST(request: Request) {
 
   const usersToSend = await getUsersToSendOpenNotification();
 
+  /* TODO: Si tu cron se despierta cada 5 minutos y encuentra 50 mensajes pendientes,
+   tu código debe ser capaz de "encolarlos" con un pequeño retraso aleatorio entre ellos
+  (ej. entre 2 y 5 segundos).
+  */
+
   const results = await Promise.allSettled(
     usersToSend.map(async ({ user, scheduledMessage }) => {
       const newSession = await sendUserOpenNotification(user);

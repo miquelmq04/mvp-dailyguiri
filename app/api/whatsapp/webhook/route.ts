@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     // 1. Creamos una pausa real de 3 segundos
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    // 2. Ejecutamos el fetch (ahora sí se ejecutará)
+    // 2. Ejecutamos el fetch
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
     try {
       await fetch(`${baseUrl}/api/cron/send-users-open-notification`, {
