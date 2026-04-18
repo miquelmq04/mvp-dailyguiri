@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     await scheduleMessage(new Date(2004), user, null);
 
     // Trigger cron to send the scheduled message after 7 seconds
-    setTimeout(async () => {
+    await setTimeout(async () => {
       const baseUrl =
         process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
       await fetch(`${baseUrl}/api/cron/send-users-open-notification`, {
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
           Authorization: `Bearer ${process.env.CRON_SECRET}`,
         },
       });
-    }, 7000);
+    }, 3000);
 
     return Response.json({
       whatsappLid: data.whatsappLid,
