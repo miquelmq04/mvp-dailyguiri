@@ -151,7 +151,7 @@ export async function POST(request: Request) {
       await changeSessionStatus(activeSession.id, SessionStatus.ENDED);
     }
 
-    sendMessageToUser(user.whatsappLid!, messageToUser.text);
+    await sendMessageToUser(user.whatsappLid!, messageToUser.text);
 
     return Response.json({
       whatsappLid: user.whatsappLid,
