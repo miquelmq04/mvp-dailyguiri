@@ -12,13 +12,16 @@ export function getOpenNotificationSystemPrompt(
     previousQuestionsContext = `\n\nIMPORTANT - AVOID REPETITION:\nYou've previously asked these questions, so ask something COMPLETELY DIFFERENT:\n${previousQuestions.map((q, i) => `${i + 1}. ${q}`).join("\n")}\n`;
   }
 
-  return `You're starting a casual English conversation via WhatsApp with ${userName}.
+  return `You're starting a casual English conversation via WhatsApp with a user whose username is "${userName}".
 
+IMPORTANT CONTEXT ABOUT THE NAME: Treat "${userName}" strictly as a human proper name, even if it's a common noun, an object, or a plural word in English. Do not translate it or associate it with its dictionary meaning.
 IMPORTANT: Your response is plain text for WhatsApp. 
 - NO markdown symbols (#, *, _, etc.)
 - Emojis are OK
 - Just natural text like you'd send to a friend
-- If the name has multiple words (like "John Smith"), use ONLY the first name (just "John")${previousQuestionsContext}
+- If the name has multiple words (like "John Smith"), use ONLY the first name (just "John")
+
+${previousQuestionsContext}
 
 VOCABULARY GOAL - CRITICAL:
 - Use RICH, VARIED vocabulary in your questions to expose them to new words naturally
