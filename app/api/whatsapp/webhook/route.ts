@@ -32,7 +32,6 @@ export async function POST(request: Request) {
   }
   const userMessage = data.message;
 
-  // TODO: IMPLEMENTAR SISTEMA DE SUSCRIPCIO PER LA MVP (Enviar un pass) + PROGRAMACIO 1r SCHEDULED_MSG
   if (userMessage === "5692312391@sub") {
     await createUser({
       whatsappLid: data.whatsappLid,
@@ -60,24 +59,6 @@ export async function POST(request: Request) {
     await sendMessageToUser(data.whatsappLid, message);
     await scheduleMessage(new Date(2004), user, null);
 
-    // 1. Creamos una pausa real de 3 segundos
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    // 2. Ejecutamos el fetch
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    try {
-      await fetch(`${baseUrl}/api/cron/send-users-open-notification`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.CRON_SECRET}`,
-        },
-      });
-      console.log("✅ Fetch al cron ejecutado con éxito");
-    } catch (error) {
-      console.error("❌ Error disparando el cron:", error);
-    }
-
-    // 3. Devolvemos la respuesta al final del todo
     return Response.json({
       whatsappLid: data.whatsappLid,
       message: message,

@@ -25,12 +25,17 @@ export async function generateUserOpenNotification(
   throw new Error("Expected text content from Claude");
 }
 
-export async function startConversation(user: User, message: string) {
+export async function startConversation(
+  user: User,
+  message: string,
+  maxUserMessages: number,
+  messageType: ConversationMessageType
+) {
   try {
     // Crear nueva sesión para la notificación abierta
     const session = await createConversationSession({
       userId: user.id,
-      maxUserMessages: Number(process.env.TOTAL_USER_SESSION_MESSAGES) || 5,
+      maxUserMessages: maxUserMessages,
     });
 
     // Insertar el mensaje del asistente (la notificación)
@@ -39,7 +44,7 @@ export async function startConversation(user: User, message: string) {
       userId: user.id,
       role: "assistant",
       content: message,
-      messageType: ConversationMessageType.OPEN,
+      messageType: messageType,
     });
 
     return session;
