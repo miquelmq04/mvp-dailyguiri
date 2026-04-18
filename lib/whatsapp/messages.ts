@@ -83,7 +83,10 @@ export async function sendMessageToUser(lid: string, message: string) {
       "http://localhost:3001/api/send-message";
     const responseBaileys = await fetch(whatsappServiceUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.WHATSAPP_SECRET}`,
+      },
       body: JSON.stringify({
         whatsappLid: lid,
         message: message,
