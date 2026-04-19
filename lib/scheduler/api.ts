@@ -9,14 +9,15 @@ import { calculateTomorrowMessageDate } from "../whatsapp/messages";
 
 export async function scheduleTomorrowMessage(
   user: User,
-  newSession: ConversationSession
+  newSession: ConversationSession,
+  messageType: MessageType
 ) {
   // Schedule tomorrow's message
   const tomorrowRandomDate = calculateTomorrowMessageDate(user);
   await createScheduledMessage({
     userId: user.id,
     scheduledDate: tomorrowRandomDate,
-    messageType: MessageType.OPEN_NOTIFICATION,
+    messageType: messageType,
     status: ScheduledMessageStatus.PENDING,
     sessionHandled: newSession.id,
   });

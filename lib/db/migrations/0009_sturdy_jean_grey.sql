@@ -1,0 +1,1 @@
+ALTER TABLE "conversation_sessions" ADD COLUMN "session_type" varchar(30) DEFAULT 'conversation' NOT NULL;

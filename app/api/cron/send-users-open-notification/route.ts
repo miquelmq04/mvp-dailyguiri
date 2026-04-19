@@ -1,11 +1,20 @@
-import { sendUserOpenNotification } from "@/lib/whatsapp/api";
+import {
+  sendFreeTrialEndNotification,
+  sendUserOpenNotification,
+} from "@/lib/whatsapp/api";
 import {
   changeSessionStatus,
+  getNotificationsSent,
   getUsersToSendOpenNotification,
   markScheduledMessageAsSent,
   setAiRespondingStatus,
 } from "@/lib/db/queries";
-import { ScheduledMessageStatus, SessionStatus } from "@/lib/db/schema";
+import {
+  ConversationMessageType,
+  MessageType,
+  ScheduledMessageStatus,
+  SessionStatus,
+} from "@/lib/db/schema";
 import { scheduleTomorrowMessage } from "@/lib/scheduler/api";
 
 export async function POST(request: Request) {
@@ -23,10 +32,23 @@ export async function POST(request: Request) {
 
   const results = await Promise.allSettled(
     usersToSend.map(async ({ user, scheduledMessage }) => {
-      const newSession = await sendUserOpenNotification(user);
+      let newSession = null;
+
+      let messageType = scheduledMessage.messageType;
+      if (messageType === MessageType.OPEN_NOTIFICATION)
+        newSession = await sendUserOpenNotification(user);
+      else if (messageType === MessageType.FREE_TRIAL_ENDED)
+        newSession = await sendFreeTrialEndNotification(user); //TODO: Change the logic to handle FREE_TRIAL_END
+      else throw Error("Message type can't be handled");
       const oldSessionId = scheduledMessage.sessionHandled;
       try {
-        scheduleTomorrowMessage(user, newSession);
+        let nextMessageType = MessageType.OPEN_NOTIFICATION;
+        const notificationType = ConversationMessageType.OPEN;
+        if ((await getNotificationsSent(user, notificationType)) >= 7) {
+          // TODO: Free trial exceed
+          nextMessageType = MessageType.FREE_TRIAL_ENDED;
+        } else await scheduleTomorrowMessage(user, newSession, nextMessageType);
+
         await markScheduledMessageAsSent(scheduledMessage.id);
         if (
           oldSessionId !== null &&

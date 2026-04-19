@@ -1,11 +1,24 @@
-import { callClaudeAPI } from "../claude/api";
+import { callClaudeAPI, ClaudeMessage } from "../claude/api";
 import { UserPreferences } from "./types";
-import { getOpenNotificationSystemPrompt } from "../prompts";
-import { ConversationMessageType, User } from "../db/schema";
+import {
+  getContinueConversationSystemPrompt,
+  getOpenNotificationSystemPrompt,
+} from "../prompts";
+import {
+  ConversationMessageType,
+  ConversationSession,
+  MessageRole,
+  SessionStatus,
+  SessionType,
+  SessionWithMessages,
+  User,
+} from "../db/schema";
 import {
   createConversationSession,
   insertMessage,
   getLastOpeningQuestions,
+  getConversationMessages,
+  changeSessionStatus,
 } from "../db/queries";
 
 export async function generateUserOpenNotification(
@@ -29,13 +42,17 @@ export async function startConversation(
   user: User,
   message: string,
   maxUserMessages: number,
-  messageType: ConversationMessageType
+  messageType: ConversationMessageType,
+  sessionStatus: SessionStatus = SessionStatus.IN_COURSE,
+  sessionType: SessionType = SessionType.CONVERSATION
 ) {
   try {
     // Crear nueva sesión para la notificación abierta
     const session = await createConversationSession({
       userId: user.id,
       maxUserMessages: maxUserMessages,
+      sessionStatus: sessionStatus,
+      sessionType: sessionType,
     });
 
     // Insertar el mensaje del asistente (la notificación)
@@ -114,4 +131,95 @@ export async function sendMessageToUser(lid: string, message: string) {
       { status: 500 }
     );
   }
+}
+
+export function getEndFreeTrialMessage(): string {
+  return `
+🌟 *¡Gracias por usar DailyGuiri!* 🌟
+
+Has completado el período de prueba gratuito. ¿Te ha parecido útil la app para practicar tu inglés?
+
+¿Estarías dispuesto/a a pagar entre 3-6€/mes para seguir mejorando tu inglés con funcionalidades premium como:
+
+✨ *Topics personalizables*
+🧠 *Preguntas más personales basadas en tu aprendizaje*
+🎙️ *Audios para practicar speaking*
+💬 *Más mensajes por día*
+⏰ *Personalización de horarios de mensajes*
+📝 *Quiz de preguntas*
+🚀 *¡Y mucho más...!*
+
+---
+
+🌟 *Thank you for using DailyGuiri!* 🌟
+
+You've completed the free trial period. Did you find the app useful for practicing your English?
+
+Would you be willing to pay 3-6€/month to continue improving your English with premium features like:
+
+✨ *Customizable topics*
+🧠 *More personal questions based on your learning*
+🎙️ *Audio messages to practice speaking*
+💬 *More messages per day*
+⏰ *Custom notification hours*
+📝 *Question quizzes*
+🚀 *And much more...*
+
+Let us know what you think! 💭
+
+---
+
+📢 *El siguiente mensaje que me envíes será para recabar tu feedback. ¡Este mensaje para mí será ORO. Quiero honestidad completa!*
+
+📢 *The next message you send will be to collect your feedback. This message will be GOLD for me. I want complete honesty!*
+
+- Miquel`;
+}
+
+export async function respondUserWithContext(
+  user: User,
+  session: ConversationSession
+) {
+  const conversationMessages: ClaudeMessage[] = await getConversationMessages(
+    user,
+    session
+  );
+
+  const conversationUserMessages = conversationMessages.filter(
+    (msg) => msg.role === MessageRole.USER
+  ).length;
+
+  const claudeResponse = await callClaudeAPI(
+    getContinueConversationSystemPrompt(
+      user,
+      conversationUserMessages,
+      session.maxUserMessages
+    ),
+    conversationMessages
+  );
+
+  const messageToUser = claudeResponse.content[0];
+  if (messageToUser.type !== "text") {
+    console.error("Claude response is not text type:", messageToUser.type);
+    return Response.json(
+      { error: "Invalid response format from AI" },
+      { status: 500 }
+    );
+  }
+
+  await insertMessage({
+    sessionId: session.id,
+    userId: user.id,
+    role: MessageRole.ASSISTANT,
+    content: messageToUser.text,
+  });
+
+  // Check if this was the last allowed user message and end session
+  if (conversationUserMessages >= session.maxUserMessages) {
+    await changeSessionStatus(session.id, SessionStatus.ENDED);
+  }
+
+  await sendMessageToUser(user.whatsappLid!, messageToUser.text);
+
+  return messageToUser.text;
 }

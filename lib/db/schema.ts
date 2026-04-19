@@ -36,6 +36,9 @@ export const conversationSessions = pgTable("conversation_sessions", {
   sessionStatus: varchar("session_status", { length: 20 })
     .notNull()
     .default("in_course"), // 'in_course' | 'ended'
+  sessionType: varchar("session_type", { length: 30 })
+    .notNull()
+    .default("conversation"), // 'conversation' | 'free_trial_ended'
   maxUserMessages: integer("max_user_messages").notNull().default(5), // Maximum user messages allowed
 });
 
@@ -155,12 +158,14 @@ export enum ConversationMessageType {
   OPEN = "open",
   CONVERSATION = "conversation",
   CLOSING = "closing",
+  FEEDBACK = "feedback",
 }
 
 export enum MessageType {
   OPEN_NOTIFICATION = "open_notification",
   REMINDER = "reminder",
   FOLLOW_UP = "follow_up",
+  FREE_TRIAL_ENDED = "free_trial_ended",
 }
 
 export enum ScheduledMessageStatus {
@@ -174,4 +179,9 @@ export enum SessionStatus {
   IN_COURSE = "in_course",
   ENDED = "ended",
   CLOSED = "closed",
+}
+
+export enum SessionType {
+  CONVERSATION = "conversation",
+  FREE_TRIAL_ENDED = "free_trial_ended",
 }

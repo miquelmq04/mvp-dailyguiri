@@ -19,7 +19,7 @@ import {
   ConversationMessageType,
   NewUser,
 } from "./schema";
-import { desc, and, eq, isNull, gte, lte, asc } from "drizzle-orm";
+import { desc, and, eq, isNull, gte, lte, asc, or } from "drizzle-orm";
 import { ClaudeMessage } from "../claude/api";
 
 export async function getUsersToSendOpenNotification() {
@@ -117,7 +117,10 @@ export async function getUsersWithPendingScheduledMessages() {
     .where(
       and(
         eq(scheduledMessages.status, ScheduledMessageStatus.PENDING),
-        eq(scheduledMessages.messageType, MessageType.OPEN_NOTIFICATION),
+        or(
+          eq(scheduledMessages.messageType, MessageType.OPEN_NOTIFICATION),
+          eq(scheduledMessages.messageType, MessageType.FREE_TRIAL_ENDED)
+        ),
         lte(scheduledMessages.scheduledDate, now)
       )
     );
@@ -203,4 +206,22 @@ export async function setUserName(user: User, newUserName: string) {
     .update(users)
     .set({ name: newUserName })
     .where(eq(users.id, user.id));
+}
+
+export async function getNotificationsSent(
+  user: User,
+  messageType: ConversationMessageType
+): Promise<number> {
+  const result = await db
+    .select()
+    .from(messages)
+    .where(
+      and(
+        eq(messages.userId, user.id),
+        eq(messages.messageType, messageType),
+        eq(messages.role, MessageRole.ASSISTANT)
+      )
+    );
+
+  return result.length;
 }

@@ -11,10 +11,19 @@ import {
   createUser,
   setUserName,
 } from "@/lib/db/queries";
-import { MessageRole, SessionStatus } from "@/lib/db/schema";
+import {
+  ConversationMessageType,
+  MessageRole,
+  MessageType,
+  SessionStatus,
+  SessionType,
+} from "@/lib/db/schema";
 import { getContinueConversationSystemPrompt } from "@/lib/prompts";
 import { scheduleMessage, scheduleTomorrowMessage } from "@/lib/scheduler/api";
-import { sendMessageToUser } from "@/lib/whatsapp/messages";
+import {
+  respondUserWithContext,
+  sendMessageToUser,
+} from "@/lib/whatsapp/messages";
 
 export async function POST(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -37,7 +46,7 @@ export async function POST(request: Request) {
       whatsappLid: data.whatsappLid,
     });
     const message =
-      "Perfecte! Ja estàs registrat 😊 Com vols que em dirigeixi a tu? (el teu nom o sobrenom)";
+      "¡Perfecto! Ya estás registrado 😊 ¿Cómo quieres que me dirija a ti? (tu nombre o apodo)";
     await sendMessageToUser(data.whatsappLid, message);
     return Response.json({
       whatsappLid: data.whatsappLid,
@@ -84,65 +93,29 @@ export async function POST(request: Request) {
     // Mark session as AI responding
     await setAiRespondingStatus(activeSession.id, true);
 
-    const sessionDetail = await getSessionDetail(activeSession.id);
-    if (!sessionDetail) {
-      return Response.json(
-        { error: "Error fetching the session" },
-        { status: 500 }
-      );
-    }
+    const messageType =
+      activeSession.sessionType === SessionType.FREE_TRIAL_ENDED
+        ? ConversationMessageType.FEEDBACK
+        : ConversationMessageType.CONVERSATION;
 
     await insertMessage({
-      sessionId: sessionDetail.id,
+      sessionId: activeSession.id,
       userId: user.id,
       role: MessageRole.USER,
       content: userMessage,
+      messageType: messageType,
     });
-
-    const conversationMessages: ClaudeMessage[] = await getConversationMessages(
-      user,
-      sessionDetail
-    );
-
-    const conversationUserMessages = conversationMessages.filter(
-      (msg) => msg.role === MessageRole.USER
-    ).length;
-
-    const claudeResponse = await callClaudeAPI(
-      getContinueConversationSystemPrompt(
-        user,
-        conversationUserMessages,
-        sessionDetail.maxUserMessages
-      ),
-      conversationMessages
-    );
-
-    const messageToUser = claudeResponse.content[0];
-    if (messageToUser.type !== "text") {
-      console.error("Claude response is not text type:", messageToUser.type);
-      return Response.json(
-        { error: "Invalid response format from AI" },
-        { status: 500 }
-      );
-    }
-
-    await insertMessage({
-      sessionId: sessionDetail.id,
-      userId: user.id,
-      role: MessageRole.ASSISTANT,
-      content: messageToUser.text,
-    });
-
-    // Check if this was the last allowed user message and end session
-    if (conversationUserMessages >= activeSession.maxUserMessages) {
+    let messageSended = null;
+    if (activeSession.sessionType === SessionType.FREE_TRIAL_ENDED) {
+      messageSended =
+        "Thank you for sending feedback! See you in the next version!";
+      await sendMessageToUser(user.whatsappLid!, messageSended);
       await changeSessionStatus(activeSession.id, SessionStatus.ENDED);
-    }
-
-    await sendMessageToUser(user.whatsappLid!, messageToUser.text);
+    } else messageSended = await respondUserWithContext(user, activeSession);
 
     return Response.json({
       whatsappLid: user.whatsappLid,
-      message: messageToUser.text,
+      message: messageSended,
     });
   } finally {
     // Always reset AI responding status
