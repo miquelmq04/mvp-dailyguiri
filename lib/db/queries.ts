@@ -20,7 +20,7 @@ import {
   NewUser,
 } from "./schema";
 import { desc, and, eq, isNull, gte, lte, asc, or } from "drizzle-orm";
-import { ClaudeMessage } from "../claude/api";
+import { AIMessage } from "../claude/classes";
 
 export async function getUsersToSendOpenNotification() {
   return getUsersWithPendingScheduledMessages();
@@ -147,7 +147,7 @@ export async function markScheduledMessageAsSent(
 export async function getConversationMessages(
   user: User,
   session: ConversationSession
-): Promise<ClaudeMessage[]> {
+): Promise<AIMessage[]> {
   const conversationMessages = await db
     .select()
     .from(messages)

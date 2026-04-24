@@ -1,4 +1,4 @@
-import { callClaudeAPI, ClaudeMessage } from "@/lib/claude/api";
+import { AIMessage } from "@/lib/claude/classes";
 import {
   getUserByNumber,
   getUserActiveSession,

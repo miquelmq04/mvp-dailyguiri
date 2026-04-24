@@ -1,5 +1,4 @@
-import { callClaudeAPI, ClaudeMessage } from "../claude/api";
-import { UserPreferences } from "./types";
+import { AIMessage } from "../claude/classes";
 import {
   getContinueConversationSystemPrompt,
   getOpenNotificationSystemPrompt,
@@ -20,6 +19,7 @@ import {
   getConversationMessages,
   changeSessionStatus,
 } from "../db/queries";
+import { getAIProvider } from "../claude/provider";
 
 export async function generateUserOpenNotification(
   user: User
@@ -28,14 +28,10 @@ export async function generateUserOpenNotification(
   const systemPrompt = getOpenNotificationSystemPrompt(user, previousQuestions);
   const messagePrompt =
     "Generate an engaging question to start a conversation.";
-  const message = await callClaudeAPI(systemPrompt, messagePrompt);
 
-  const firstBlock = message.content[0];
-  if (firstBlock.type === "text") {
-    return firstBlock.text;
-  }
-
-  throw new Error("Expected text content from Claude");
+  const provider = getAIProvider();
+  const message = provider.generateResponse(systemPrompt, messagePrompt);
+  return message;
 }
 
 export async function startConversation(
@@ -180,7 +176,7 @@ export async function respondUserWithContext(
   user: User,
   session: ConversationSession
 ) {
-  const conversationMessages: ClaudeMessage[] = await getConversationMessages(
+  const conversationMessages: AIMessage[] = await getConversationMessages(
     user,
     session
   );
@@ -189,29 +185,22 @@ export async function respondUserWithContext(
     (msg) => msg.role === MessageRole.USER
   ).length;
 
-  const claudeResponse = await callClaudeAPI(
-    getContinueConversationSystemPrompt(
-      user,
-      conversationUserMessages,
-      session.maxUserMessages
-    ),
+  const provider = getAIProvider();
+  const systemPrompt = getContinueConversationSystemPrompt(
+    user,
+    conversationUserMessages,
+    session.maxUserMessages
+  );
+  const message = await provider.generateResponse(
+    systemPrompt,
     conversationMessages
   );
-
-  const messageToUser = claudeResponse.content[0];
-  if (messageToUser.type !== "text") {
-    console.error("Claude response is not text type:", messageToUser.type);
-    return Response.json(
-      { error: "Invalid response format from AI" },
-      { status: 500 }
-    );
-  }
 
   await insertMessage({
     sessionId: session.id,
     userId: user.id,
     role: MessageRole.ASSISTANT,
-    content: messageToUser.text,
+    content: message,
   });
 
   // Check if this was the last allowed user message and end session
@@ -219,7 +208,7 @@ export async function respondUserWithContext(
     await changeSessionStatus(session.id, SessionStatus.ENDED);
   }
 
-  await sendMessageToUser(user.whatsappLid!, messageToUser.text);
+  await sendMessageToUser(user.whatsappLid!, message);
 
-  return messageToUser.text;
+  return message;
 }

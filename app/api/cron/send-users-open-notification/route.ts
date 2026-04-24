@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
   const usersToSend = await getUsersToSendOpenNotification();
 
-  /* TODO: Si tu cron se despierta cada 5 minutos y encuentra 50 mensajes pendientes,
+  /* TODO: Si tu cron se despierta y encuentra 50 mensajes pendientes,
    tu código debe ser capaz de "encolarlos" con un pequeño retraso aleatorio entre ellos
   (ej. entre 2 y 5 segundos).
   */
@@ -38,14 +38,13 @@ export async function POST(request: Request) {
       if (messageType === MessageType.OPEN_NOTIFICATION)
         newSession = await sendUserOpenNotification(user);
       else if (messageType === MessageType.FREE_TRIAL_ENDED)
-        newSession = await sendFreeTrialEndNotification(user); //TODO: Change the logic to handle FREE_TRIAL_END
+        newSession = await sendFreeTrialEndNotification(user);
       else throw Error("Message type can't be handled");
       const oldSessionId = scheduledMessage.sessionHandled;
       try {
         let nextMessageType = MessageType.OPEN_NOTIFICATION;
         const notificationType = ConversationMessageType.OPEN;
         if ((await getNotificationsSent(user, notificationType)) >= 7) {
-          // TODO: Free trial exceed
           nextMessageType = MessageType.FREE_TRIAL_ENDED;
         } else await scheduleTomorrowMessage(user, newSession, nextMessageType);
 
